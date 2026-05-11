@@ -1,0 +1,73 @@
+import serial
+import time
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.write_api import SYNCHRONOUS
+import time
+import datetime
+import os
+from dotenv import load_dotenv
+
+arduino = serial.Serial('COM5', 9600)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(script_dir, '.env')
+load_dotenv(env_path)
+
+token = os.getenv("INFLUX_TOKEN")
+url = os.getenv("INFLUX_URL")
+org = os.getenv("INFLUX_ORG")
+bucket = os.getenv("INFLUX_BUCKET")
+client = InfluxDBClient(url=url, token=token, org=org)
+write_api = client.write_api(write_options=SYNCHRONOUS)
+
+
+
+in_voltagetoPower_mW = 140.0/2.34/1000.0
+out_voltagetoPower_mW = 108.0/1.79/1000.0
+
+while True:
+    # Arduino read
+    if arduino.in_waiting > 0:
+        try:
+            line_raw = arduino.readline().decode('utf-8').strip()
+            print(f"[DEBUG] Raw line received: '{line_raw}'") #d Debug print
+            line = line_raw.split(";")
+
+            if len(line) < 4:
+                print(f"[DEBUG] Invalid line format (less than 2 parts): '{line_raw}'") # Debug print
+                continue
+
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+
+            inputbeamPower = float(line[0])*in_voltagetoPower_mW
+            outputbeamPower = float(line[1])*out_voltagetoPower_mW
+            temperature = float(line[2])
+            temperature_room = float(line[3])
+
+            if inputbeamPower > 0.020:
+                efficiency = round(outputbeamPower / inputbeamPower,2)
+            else:
+                efficiency = -1.0
+            p_in = round(inputbeamPower,3)
+            p_out = round(outputbeamPower,3)
+            eff = round(efficiency,2)
+
+            # InfluxDB
+            point_in = Point("InputBeam_mW").field("power_mW", p_in)
+            point_out = Point("OutputBeam_mW").field("power_mW", p_out)
+            point_eff = Point("Efficiency").field("efficiency_1", eff)
+            point_temp = Point("Temperature").field("temperature_C", temperature)
+            point_temp_room = Point("Temperature_room").field("temperature_C", temperature_room)
+
+            write_api.write(bucket=bucket, org=org, record=[point_in, point_out, point_eff, point_temp, point_temp_room])
+
+            print(f"Saved: {timestamp}ms, P_in: {p_in} mW, P_out: {p_out} mW, Eff: {eff}(1), temp_board: {temperature}C, temp_room: {temperature_room}C")
+
+        except ValueError as e:
+            print(f"[DEBUG] ValueError processing line: '{line_raw}' Error: {e}") # Debug print for ValueError
+            continue
+        except Exception as e:
+            print(f"[DEBUG] An unexpected error occurred: {e}") # Catch other potential errors
+            continue
+    else:
+        continue
+    time.sleep(0.01)
