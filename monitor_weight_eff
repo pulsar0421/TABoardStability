@@ -23,6 +23,7 @@ log_filename = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_Eff
 log_path = os.path.join(script_dir, log_filename)
 file_exists = os.path.exists(log_path)
 log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+
 if not file_exists or os.path.getsize(log_path) == 0:
     log_file.write("timestamp;p_in;p_out;eff;temperature;temperature_room\n")
 

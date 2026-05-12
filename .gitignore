@@ -2,3 +2,9 @@
 .env
 .vscode
 __pycache__
+.png
+.jpeg
+.jpg
+.log
+*.txt
+!README.txt
