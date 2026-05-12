@@ -6,5 +6,6 @@ __pycache__
 .jpeg
 .jpg
 .log
+.png
 *.txt
 !README.txt
