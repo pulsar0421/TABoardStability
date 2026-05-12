@@ -19,7 +19,12 @@ bucket = os.getenv("INFLUX_BUCKET")
 client = InfluxDBClient(url=url, token=token, org=org)
 write_api = client.write_api(write_options=SYNCHRONOUS)
 
-
+log_filename = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_Efficiency.txt")
+log_path = os.path.join(script_dir, log_filename)
+file_exists = os.path.exists(log_path)
+log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+if not file_exists or os.path.getsize(log_path) == 0:
+    log_file.write("timestamp;p_in;p_out;eff;temperature;temperature_room\n")
 
 in_voltagetoPower_mW = 140.0/2.34/1000.0
 out_voltagetoPower_mW = 108.0/1.79/1000.0
@@ -60,7 +65,9 @@ while True:
 
             write_api.write(bucket=bucket, org=org, record=[point_in, point_out, point_eff, point_temp, point_temp_room])
 
-            print(f"Saved: {timestamp}ms, P_in: {p_in} mW, P_out: {p_out} mW, Eff: {eff}(1), temp_board: {temperature}C, temp_room: {temperature_room}C")
+            output_line = f"Saved: {timestamp}ms, P_in: {p_in} mW, P_out: {p_out} mW, Eff: {eff}(1), temp_board: {temperature}C, temp_room: {temperature_room}C"
+            print(output_line)
+            log_file.write(f"{timestamp.isoformat()};{p_in};{p_out};{eff};{temperature};{temperature_room}\n")
 
         except ValueError as e:
             print(f"[DEBUG] ValueError processing line: '{line_raw}' Error: {e}") # Debug print for ValueError
