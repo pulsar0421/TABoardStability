@@ -11,13 +11,14 @@ load_dotenv(env_path)
 token = os.getenv("INFLUX_TOKEN")
 url = os.getenv("INFLUX_URL")
 org = os.getenv("INFLUX_ORG")
+bucket = os.getenv("INFLUX_BUCKET")
 
-missing_vars = [var for var in ["INFLUX_TOKEN", "INFLUX_URL", "INFLUX_ORG"] if not os.getenv(var)]
+missing_vars = [var for var in ["INFLUX_TOKEN", "INFLUX_URL", "INFLUX_ORG", "INFLUX_BUCKET"] if not os.getenv(var)]
 if missing_vars:
     raise RuntimeError(f"Missing InfluxDB configuration. Variables not found: {', '.join(missing_vars)}. "
                        f"Ensure they are set in your .env file at {env_path}.")
 
-BUCKET = "TABoardStability"
+BUCKET = bucket
 OUTPUT_FILENAME = "stability_export.csv"
 
 with InfluxDBClient(url=url, token=token, org=org) as client:
