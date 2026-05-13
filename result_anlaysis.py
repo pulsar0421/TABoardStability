@@ -5,21 +5,32 @@ import pandas as pd
 import os
 
 # ===== CONFIG SECTION =====
+# 05.12
 # 15-10-10 to 15-11-10: 10s short-term stability test
 # 15-10-53 to 15-24-52: 10min short term stability test
 # 15-30-30 to 16-40-00: 1hr long term stability test
 
-#filename = "20260512_Efficiency_longterm_1hr.txt"
-filename = "20260512_Efficiency_shortterm_10s_m_.txt"
-start_time = datetime.time(15, 10, 10)
-end_time = datetime.time(15, 11, 10)
+#05.12, 05.13
+# 05.12 16-31-00 to 05.13 13-20-00: 1 day long term stability test
+
+#filename = "20260512_Efficiency_shortterm_10s_m_.txt"
+filename = "20260512_Efficiency_longterm_1hr.txt"
+#filename =  "20260512_Efficiency_1day.txt"
+
+# Use full date + time range for filtering. 
+# Set the date and time here to select the exact window you want.
+seoul_tz = datetime.timezone(datetime.timedelta(hours=9))
+start_datetime = datetime.datetime(2026, 5, 12, 15, 30, 30, tzinfo=seoul_tz)
+end_datetime = datetime.datetime(2026, 5, 12, 16, 40, 0, tzinfo=seoul_tz)
+
+
 dpi = 300
 figsize1 = (12, 8)
 figsize2 = (12, 6)
-x_axis_interval_minutes = 0.1  # X-axis time interval in minutes
-first_window_minutes = .1  # average on the first N minutes of filtered data
-middle_window_minutes = .1  # average on the middle N minutes of filtered data
-last_window_minutes = .1   # average on the last N minutes of filtered data
+x_axis_interval_minutes = 10  # X-axis time interval in minutes
+first_window_minutes = 1  # average on the first N minutes of filtered data
+middle_window_minutes = 5  # average on the middle N minutes of filtered data
+last_window_minutes = 5   # average on the last N minutes of filtered data
 # =======================
 
 df = pd.read_csv(filename, sep=';')
@@ -32,15 +43,15 @@ for col in ['p_in', 'p_out', 'eff', 'temperature', 'temperature_room']:
 
 # KST filtering
 filtered_df = df[
-    (df['timestamp'].dt.time >= start_time) &
-    (df['timestamp'].dt.time <= end_time)
+    (df['timestamp'] >= start_datetime) &
+    (df['timestamp'] <= end_datetime)
 ].copy()
 
 print(f'Full rows: {len(df)}, filtered rows: {len(filtered_df)}')
 print(f'Available local time range: {df["timestamp"].min()} - {df["timestamp"].max()}')
 
 if filtered_df.empty:
-    raise ValueError("filtered_df is empty. Check start_time and end_time.")
+    raise ValueError("filtered_df is empty. Check start_datetime and end_datetime.")
 
 # Average efficiency for the first, middle, and last windows
 first_window_end = filtered_df['timestamp'].min() + datetime.timedelta(minutes=first_window_minutes)
@@ -92,12 +103,12 @@ while current <= filtered_df['timestamp'].max():
     times.append(current)
     current += interval_delta
 ax1.set_xticks(times)
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M', tz=seoul_tz))
 
 fig.autofmt_xdate()
 fig.tight_layout()
 
-output_image = os.path.splitext(filename)[0] + f'_filtered_{start_time.strftime("%H-%M-%S")}_{end_time.strftime("%H-%M-%S")}.png'
+output_image = os.path.splitext(filename)[0] + f'_filtered_{start_datetime.strftime("%H-%M-%S")}_{end_datetime.strftime("%H-%M-%S")}.png'
 fig.savefig(output_image, dpi=dpi, bbox_inches='tight')
 print(f'Saved filtered figure to: {output_image}')
 
@@ -113,12 +124,12 @@ ax3.grid(True)
 
 # Set x-axis time interval
 ax3.set_xticks(times)
-ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+ax3.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M', tz=seoul_tz))
 
 fig2.autofmt_xdate()
 fig2.tight_layout()
 
-output_image2 = os.path.splitext(filename)[0] + f'_temperature_overlay_{start_time.strftime("%H-%M-%S")}_{end_time.strftime("%H-%M-%S")}.png'
+output_image2 = os.path.splitext(filename)[0] + f'_temperature_overlay_{start_datetime.strftime("%H-%M-%S")}_{end_datetime.strftime("%H-%M-%S")}.png'
 fig2.savefig(output_image2, dpi=dpi, bbox_inches='tight')
 print(f'Saved temperature figure to: {output_image2}')
 
